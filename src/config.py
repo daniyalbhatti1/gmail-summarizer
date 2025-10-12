@@ -69,10 +69,12 @@ class Config:
         if not accounts:
             raise ValueError("At least one Gmail account must be configured")
 
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        use_llm = os.getenv("USE_LLM", "false").lower() == "true"
-        timezone = os.getenv("TIMEZONE", "America/New_York")
-        lookback_hours = int(os.getenv("LOOKBACK_HOURS", "48"))
+        openai_api_key = os.getenv("OPENAI_API_KEY") or None
+        use_llm_env = os.getenv("USE_LLM", "false").strip()
+        use_llm = use_llm_env.lower() == "true" if use_llm_env else False
+        timezone = os.getenv("TIMEZONE", "America/New_York").strip() or "America/New_York"
+        lookback_hours_env = os.getenv("LOOKBACK_HOURS", "48").strip()
+        lookback_hours = int(lookback_hours_env) if lookback_hours_env else 48
 
         # Load user-editable config from YAML
         config_path = Path(__file__).parent.parent / "config.yml"
