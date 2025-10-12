@@ -26,28 +26,39 @@ SCOPES = [
 
 
 def get_credentials_from_env() -> tuple[str, str]:
-    """Get OAuth client credentials from environment."""
+    """Get OAuth client credentials from environment or prompt."""
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
 
     if not client_id or not client_secret:
         print("=" * 70)
-        print("ERROR: Missing OAuth credentials")
+        print("OAuth Credentials Required")
         print("=" * 70)
         print()
-        print("Please set the following environment variables:")
-        print("  - GOOGLE_CLIENT_ID")
-        print("  - GOOGLE_CLIENT_SECRET")
-        print()
-        print("To get these:")
+        print("To get these credentials:")
         print("1. Go to https://console.cloud.google.com/")
         print("2. Create a new project (or select existing)")
         print("3. Enable Gmail API")
         print("4. Go to 'Credentials' → 'Create Credentials' → 'OAuth 2.0 Client ID'")
         print("5. Choose 'Desktop app' as application type")
-        print("6. Download the credentials and extract client_id and client_secret")
+        print("6. Copy the client_id and client_secret")
         print()
-        sys.exit(1)
+        print("-" * 70)
+        print()
+        
+        if not client_id:
+            client_id = input("Enter your GOOGLE_CLIENT_ID: ").strip()
+            if not client_id:
+                print("ERROR: Client ID is required")
+                sys.exit(1)
+        
+        if not client_secret:
+            client_secret = input("Enter your GOOGLE_CLIENT_SECRET: ").strip()
+            if not client_secret:
+                print("ERROR: Client Secret is required")
+                sys.exit(1)
+        
+        print()
 
     return client_id, client_secret
 
