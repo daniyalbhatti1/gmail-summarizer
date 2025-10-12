@@ -1,0 +1,73 @@
+name: Gmail Digest
+
+on:
+  schedule:
+    # Run at 09:00 and 13:00 America/New_York
+    # 09:00 ET = 14:00 UTC (standard) or 13:00 UTC (daylight)
+    # 13:00 ET = 18:00 UTC (standard) or 17:00 UTC (daylight)
+    # Using both to cover DST transitions
+    - cron: '0 13,14 * * *'  # 09:00 ET
+    - cron: '0 17,18 * * *'  # 13:00 ET
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  generate-digest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Check current time (for debugging)
+        run: |
+          echo "UTC time: $(date -u)"
+          echo "America/New_York time: $(TZ=America/New_York date)"
+
+      - name: Restore state cache
+        uses: actions/cache@v3
+        with:
+          path: state.json
+          key: gmail-digest-state-${{ github.run_id }}
+          restore-keys: |
+            gmail-digest-state-
+
+      - name: Run Gmail Digest
+        env:
+          MAIN_EMAIL: ${{ secrets.MAIN_EMAIL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GMAIL_ACCOUNTS_JSON: ${{ secrets.GMAIL_ACCOUNTS_JSON }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          USE_LLM: ${{ secrets.USE_LLM }}
+          TIMEZONE: ${{ secrets.TIMEZONE }}
+          LOOKBACK_HOURS: ${{ secrets.LOOKBACK_HOURS }}
+        run: |
+          python -m src.main
+
+      - name: Save state cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: state.json
+          key: gmail-digest-state-${{ github.run_id }}
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_number }}
+          path: |
+            *.log
+          retention-days: 7
+
