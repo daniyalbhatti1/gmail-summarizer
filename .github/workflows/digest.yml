@@ -2,12 +2,12 @@ name: Gmail Digest
 
 on:
   schedule:
-    # Run at 09:00 and 13:00 America/New_York
-    # 09:00 ET = 14:00 UTC (standard) or 13:00 UTC (daylight)
-    # 13:00 ET = 18:00 UTC (standard) or 17:00 UTC (daylight)
+    # Run at 08:00 AM and 05:00 PM America/New_York
+    # 08:00 AM ET = 13:00 UTC (daylight) or 14:00 UTC (standard)
+    # 05:00 PM ET = 22:00 UTC (daylight) or 23:00 UTC (standard)
     # Using both to cover DST transitions
-    - cron: '0 13,14 * * *'  # 09:00 ET
-    - cron: '0 17,18 * * *'  # 13:00 ET
+    - cron: '0 13,14 * * *'  # 08:00 AM ET
+    - cron: '0 22,23 * * *'  # 05:00 PM ET
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
