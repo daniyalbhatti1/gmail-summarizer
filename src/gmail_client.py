@@ -32,6 +32,10 @@ class GmailClient:
     def _initialize_service(self) -> None:
         """Initialize the Gmail API service with OAuth credentials."""
         try:
+            logger.info(f"Initializing Gmail client for {self.account.email}...")
+            logger.debug(f"Using client_id: {self.client_id[:20]}...")
+            logger.debug(f"Refresh token starts with: {self.account.refresh_token[:20]}...")
+            
             # Create credentials from refresh token
             creds = Credentials(
                 token=None,
@@ -42,22 +46,26 @@ class GmailClient:
                 scopes=self.SCOPES,
             )
 
-            # Refresh the token if needed
-            if not creds.valid:
-                if creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                else:
-                    raise ValueError(
-                        f"Invalid credentials for {self.account.email}. "
-                        "Please regenerate tokens using scripts/generate_tokens.py"
-                    )
+            logger.info(f"Credentials created, refreshing token for {self.account.email}...")
+            
+            # Refresh the token
+            try:
+                creds.refresh(Request())
+                logger.info(f"Token refreshed successfully for {self.account.email}")
+            except Exception as refresh_error:
+                logger.error(f"Token refresh failed for {self.account.email}: {refresh_error}")
+                raise ValueError(
+                    f"Failed to refresh token for {self.account.email}. "
+                    f"Error: {refresh_error}. "
+                    "Please regenerate tokens using scripts/generate_tokens.py"
+                )
 
             # Build the service
             self.service = build("gmail", "v1", credentials=creds)
-            logger.info(f"Successfully initialized Gmail client for {self.account.email}")
+            logger.info(f"✓ Successfully initialized Gmail client for {self.account.email}")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Gmail client for {self.account.email}: {e}")
+            logger.error(f"✗ Failed to initialize Gmail client for {self.account.email}: {e}", exc_info=True)
             raise
 
     def list_messages(
