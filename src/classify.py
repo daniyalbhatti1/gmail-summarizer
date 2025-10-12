@@ -230,99 +230,6 @@ def classify_email_heuristic(email: EmailMessage, config: Config) -> ClassifiedE
     )
 
 
-def classify_email_llm(
-    email: EmailMessage, heuristic_result: ClassifiedEmail, config: Config
-) -> ClassifiedEmail:
-    """
-    Enhance classification using LLM (optional).
-
-    Falls back to heuristic result if LLM fails.
-
-    Args:
-        email: Email to classify
-        heuristic_result: Result from heuristic classification
-        config: Application configuration
-
-    Returns:
-        Enhanced ClassifiedEmail
-    """
-    if not config.use_llm or not config.openai_api_key:
-        return heuristic_result
-
-    try:
-        import openai
-
-        client = openai.OpenAI(api_key=config.openai_api_key)
-
-        prompt = f"""Classify this email and provide a brief summary.
-
-Subject: {email.subject}
-From: {email.sender}
-Date: {email.date.strftime('%Y-%m-%d %H:%M')}
-Preview: {email.snippet[:200]}
-
-Current heuristic classification: {heuristic_result.priority.value}
-Score: {heuristic_result.score}
-Tags: {', '.join(heuristic_result.tags)}
-
-Please respond with JSON:
-{{
-    "priority": "urgent|actionable|meeting|finance|fyi|low_value",
-    "gist": "one-line summary (max 100 chars)",
-    "reasoning": "brief explanation"
-}}
-
-Focus on:
-- Is this time-sensitive or has a deadline?
-- Does it require action from the recipient?
-- Is it a meeting/calendar invite?
-- Is it promotional/low-value?
-"""
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=200,
-            response_format={"type": "json_object"},
-        )
-
-        result = response.choices[0].message.content
-        if not result:
-            return heuristic_result
-
-        import json
-
-        llm_result = json.loads(result)
-
-        # Map LLM priority to our Priority enum
-        priority_map = {
-            "urgent": Priority.URGENT,
-            "actionable": Priority.ACTIONABLE,
-            "meeting": Priority.MEETING,
-            "finance": Priority.FINANCE,
-            "fyi": Priority.FYI,
-            "low_value": Priority.LOW_VALUE,
-        }
-
-        priority = priority_map.get(llm_result.get("priority", "fyi").lower(), Priority.FYI)
-        gist = llm_result.get("gist", heuristic_result.gist)[:100]
-        reasoning = f"LLM: {llm_result.get('reasoning', 'No reasoning provided')}"
-
-        return ClassifiedEmail(
-            email=email,
-            priority=priority,
-            score=heuristic_result.score,
-            tags=heuristic_result.tags + ["llm-enhanced"],
-            gist=gist,
-            reasoning=reasoning,
-        )
-
-    except Exception as e:
-        logger.warning(f"LLM classification failed, falling back to heuristics: {e}")
-        return heuristic_result
-
-
 def classify_emails(emails: list[EmailMessage], config: Config) -> list[ClassifiedEmail]:
     """
     Classify a batch of emails.
@@ -338,13 +245,7 @@ def classify_emails(emails: list[EmailMessage], config: Config) -> list[Classifi
 
     for email in emails:
         # Get heuristic classification
-        heuristic_result = classify_email_heuristic(email, config)
-
-        # Optionally enhance with LLM
-        if config.use_llm and heuristic_result.priority != Priority.LOW_VALUE:
-            result = classify_email_llm(email, heuristic_result, config)
-        else:
-            result = heuristic_result
+        result = classify_email_heuristic(email, config)
 
         # Filter out low-value emails
         if result.priority != Priority.LOW_VALUE:

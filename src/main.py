@@ -40,7 +40,6 @@ def main() -> int:
         config = get_config()
         logger.info(f"Configured to monitor {len(config.accounts)} Gmail account(s)")
         logger.info(f"Digest will be sent to: {config.main_email}")
-        logger.info(f"LLM mode: {'enabled' if config.use_llm else 'disabled'}")
         logger.info(f"Looking back: {config.lookback_hours} hours")
 
         # Fetch emails from all accounts

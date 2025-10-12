@@ -50,58 +50,6 @@ def generate_summary_stats(classified_emails: list[ClassifiedEmail]) -> dict[str
     }
 
 
-def generate_llm_summary(
-    classified_emails: list[ClassifiedEmail], stats: dict[str, Any], config: Config
-) -> str | None:
-    """
-    Generate an executive summary using LLM (optional).
-
-    Returns:
-        Summary text or None if LLM is not enabled/fails
-    """
-    if not config.use_llm or not config.openai_api_key:
-        return None
-
-    try:
-        import openai
-
-        client = openai.OpenAI(api_key=config.openai_api_key)
-
-        # Prepare email summaries for LLM
-        email_summaries = []
-        for priority in [Priority.URGENT, Priority.ACTIONABLE, Priority.MEETING, Priority.FINANCE]:
-            emails = stats["by_priority"].get(priority, [])
-            for email in emails[:5]:  # Top 5 per category
-                email_summaries.append(
-                    f"- [{priority.value.upper()}] {email.email.subject} (from {email.email.sender_email}): {email.gist}"
-                )
-
-        summaries_text = "\n".join(email_summaries[:15])  # Max 15 items
-
-        prompt = f"""Generate a brief executive summary (3-4 sentences) of these emails:
-
-{summaries_text}
-
-Total emails: {stats['total_count']}
-Urgent: {stats['priority_counts'].get('urgent', 0)}
-Actionable: {stats['priority_counts'].get('actionable', 0)}
-Meetings: {stats['priority_counts'].get('meeting', 0)}
-
-Focus on the most critical items and any patterns."""
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
-            max_tokens=200,
-        )
-
-        result = response.choices[0].message.content
-        return result
-
-    except Exception as e:
-        logger.warning(f"LLM summary generation failed: {e}")
-        return None
 
 
 def generate_at_glance_summary(stats: dict[str, Any]) -> str:
@@ -158,16 +106,14 @@ def summarize(classified_emails: list[ClassifiedEmail], config: Config) -> dict[
         Dictionary containing:
             - stats: Statistics and groupings
             - at_glance: Quick text summary
-            - executive_summary: Optional LLM-generated summary
     """
     stats = generate_summary_stats(classified_emails)
     at_glance = generate_at_glance_summary(stats)
-    executive_summary = generate_llm_summary(classified_emails, stats, config)
 
     return {
         "stats": stats,
         "at_glance": at_glance,
-        "executive_summary": executive_summary,
+        "executive_summary": None,
         "timestamp": datetime.now(),
     }
 

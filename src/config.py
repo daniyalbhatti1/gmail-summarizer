@@ -26,8 +26,6 @@ class Config:
     accounts: list[AccountConfig]
     google_client_id: str
     google_client_secret: str
-    openai_api_key: str | None
-    use_llm: bool
     timezone: str
     lookback_hours: int
     whitelist_senders: list[str]
@@ -69,9 +67,6 @@ class Config:
         if not accounts:
             raise ValueError("At least one Gmail account must be configured")
 
-        openai_api_key = os.getenv("OPENAI_API_KEY") or None
-        use_llm_env = os.getenv("USE_LLM", "false").strip()
-        use_llm = use_llm_env.lower() == "true" if use_llm_env else False
         timezone = os.getenv("TIMEZONE", "America/New_York").strip() or "America/New_York"
         lookback_hours_env = os.getenv("LOOKBACK_HOURS", "48").strip()
         lookback_hours = int(lookback_hours_env) if lookback_hours_env else 48
@@ -89,8 +84,6 @@ class Config:
             accounts=accounts,
             google_client_id=google_client_id,
             google_client_secret=google_client_secret,
-            openai_api_key=openai_api_key,
-            use_llm=use_llm,
             timezone=timezone,
             lookback_hours=lookback_hours,
             whitelist_senders=yaml_config.get("whitelist_senders", []),
