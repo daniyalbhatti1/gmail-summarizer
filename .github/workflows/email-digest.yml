@@ -24,7 +24,7 @@ jobs:
       - name: Rebuild credential files
         run: |
           printf '%s' "${{ secrets.GMAIL_CREDENTIALS_JSON }}" > credentials.json
-          printf '%s' "${{ secrets.GMAIL_TOKEN_JSON }}" > token.json
+          echo '${{ secrets.GMAIL_TOKEN_JSON }}' > token.json
 
       - name: Run email digest
         env:
